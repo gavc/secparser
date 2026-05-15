@@ -98,6 +98,25 @@ public class EvtxLogParserTests
         Assert.False(string.IsNullOrWhiteSpace(record.ParseWarning));
     }
 
+    [Fact]
+    public void PopulateFromEventXml_RecordsParseWarningWhenEventXmlCannotBeRead()
+    {
+        var record = new SecurityEventRecord
+        {
+            EventId = 4624,
+            RecordId = 42,
+            Computer = "WS-01"
+        };
+
+        EvtxLogParser.PopulateFromEventXml(record, () => throw new InvalidOperationException("Event payload unavailable."));
+
+        Assert.True(record.HasParseWarning);
+        Assert.Contains("Failed to read event XML", record.ParseWarning);
+        Assert.Equal(4624, record.EventId);
+        Assert.Equal(42, record.RecordId);
+        Assert.Equal("WS-01", record.Computer);
+    }
+
     [Theory]
     [InlineData(1102, "Audit Log Cleared")]
     [InlineData(4688, "Process Created")]

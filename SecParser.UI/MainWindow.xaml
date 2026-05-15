@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SecParser.UI"
         mc:Ignorable="d"
-        Title="SecParser" Height="600" Width="1000">
+        Title="SecParser" Height="600" Width="1000" Icon="assets/secparser.ico">
     <DockPanel>
         <!-- Menu Bar -->
         <Menu DockPanel.Dock="Top">
@@ -49,6 +49,8 @@
             <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5,0" Padding="10,0"/>
             <TextBlock Text="{Binding PageSummary}" VerticalAlignment="Center" Margin="5,0"/>
             <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5,0" Padding="10,0"/>
+            <Separator/>
+            <Button Content="Cancel" Command="{Binding CancelOperationCommand}" Visibility="{Binding CancelButtonVisibility}" Margin="5,0" Padding="10,0"/>
         </ToolBar>
 
         <!-- Status Bar -->

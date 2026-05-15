@@ -40,9 +40,10 @@ namespace SecParser.Core.Parsers
             await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                EventLogSession session = BuildSession(computerName, domain, username, password);
+                using var session = BuildSession(computerName, domain, username, password);
+                using var cancelRegistration = cancellationToken.Register(session.Dispose);
 
-                using (session)
+                try
                 {
                     // ExportLog exports the entire named log channel to a self-contained .evtx file.
                     // The wildcard query "*" retrieves all events.
@@ -52,6 +53,16 @@ namespace SecParser.Core.Parsers
                         query: "*",
                         targetFilePath: localPath);
                 }
+                catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+                catch (EventLogException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
             }, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();

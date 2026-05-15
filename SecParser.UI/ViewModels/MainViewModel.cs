@@ -53,7 +53,16 @@ namespace SecParser.UI.ViewModels
         [ObservableProperty]
         private bool isLoading;
 
-        partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(ProgressBarVisibility));
+        partial void OnIsLoadingChanged(bool value)
+        {
+            OnPropertyChanged(nameof(ProgressBarVisibility));
+            OnPropertyChanged(nameof(CancelButtonVisibility));
+        }
+
+        [ObservableProperty]
+        private bool isCancellationRequested;
+
+        partial void OnIsCancellationRequestedChanged(bool value) => OnPropertyChanged(nameof(CancelButtonVisibility));
 
         private CancellationTokenSource? _loadCts;
 
@@ -104,6 +113,10 @@ namespace SecParser.UI.ViewModels
 
         public Visibility ProgressBarVisibility => IsLoading ? Visibility.Visible : Visibility.Collapsed;
 
+        public Visibility CancelButtonVisibility => _loadCts != null && IsLoading && !IsCancellationRequested
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
         public ObservableCollection<UserFilterItem> AvailableUsers { get; } = new();
 
         public ObservableCollection<ParseDiagnostic> ParseDiagnostics { get; } = new();
@@ -148,6 +161,9 @@ namespace SecParser.UI.ViewModels
                 return;
 
             RemoteLogCollector.RemoteLogCollectionResult collection;
+            var tokenSource = BeginOperation();
+            var token = tokenSource.Token;
+
             try
             {
                 IsLoading = true;
@@ -157,7 +173,14 @@ namespace SecParser.UI.ViewModels
                     dialog.ComputerName!,
                     dialog.Domain,
                     dialog.Username,
-                    dialog.Password);
+                    dialog.Password,
+                    token);
+            }
+            catch (OperationCanceledException)
+            {
+                StatusMessage = "Remote collection cancelled.";
+                EndOperation(tokenSource);
+                return;
             }
             catch (Exception ex)
             {
@@ -165,25 +188,25 @@ namespace SecParser.UI.ViewModels
                     $"Failed to collect remote log from {dialog.ComputerName}:\n\n{ex.Message}",
                     "Remote Collection Failed", MessageBoxButton.OK, MessageBoxImage.Error);
                 StatusMessage = "Remote collection failed.";
-                IsLoading = false;
+                EndOperation(tokenSource);
                 return;
             }
 
-            // ParseAndLoadFileAsync takes ownership of IsLoading from here
-            await ParseAndLoadFileAsync(collection.LogFilePath);
+            EndOperation(tokenSource);
+
+            var loaded = await ParseAndLoadFileAsync(collection.LogFilePath);
+            if (!loaded)
+                return;
 
             MessageBox.Show(
                 $"Remote log collected and saved to:\n{collection.LogFilePath}\n\nManifest:\n{collection.ManifestFilePath}\n\nSHA-256:\n{collection.Sha256}",
                 "Collection Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private async Task ParseAndLoadFileAsync(string filePath)
+        private async Task<bool> ParseAndLoadFileAsync(string filePath)
         {
-            // Cancel any in-flight parse and start a fresh token
-            _loadCts?.Cancel();
-            _loadCts?.Dispose();
-            _loadCts = new CancellationTokenSource();
-            var token = _loadCts.Token;
+            var tokenSource = BeginOperation();
+            var token = tokenSource.Token;
 
             try
             {
@@ -292,6 +315,8 @@ namespace SecParser.UI.ViewModels
                             TotalPages = CalculateTotalPages(FilteredCount);
                         });
                     }
+
+                    token.ThrowIfCancellationRequested();
                 });
 
                 ApplyFilter();
@@ -299,20 +324,58 @@ namespace SecParser.UI.ViewModels
                 StatusMessage = ParseWarningCount == 0
                     ? "Loaded successfully."
                     : $"Loaded with {ParseWarningCount} parse warning(s).";
+
+                return true;
             }
             catch (OperationCanceledException)
             {
                 StatusMessage = "Loading cancelled.";
+                return false;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error parsing file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 StatusMessage = "Error loading file.";
+                return false;
             }
             finally
             {
-                IsLoading = false;
+                EndOperation(tokenSource);
             }
+        }
+
+        [RelayCommand]
+        private void CancelOperation()
+        {
+            if (_loadCts == null || IsCancellationRequested)
+                return;
+
+            IsCancellationRequested = true;
+            StatusMessage = "Cancellation requested...";
+            _loadCts.Cancel();
+        }
+
+        private CancellationTokenSource BeginOperation()
+        {
+            _loadCts?.Cancel();
+            _loadCts?.Dispose();
+            _loadCts = new CancellationTokenSource();
+            IsCancellationRequested = false;
+            OnPropertyChanged(nameof(CancelButtonVisibility));
+            return _loadCts;
+        }
+
+        private void EndOperation(CancellationTokenSource tokenSource)
+        {
+            if (ReferenceEquals(_loadCts, tokenSource))
+            {
+                _loadCts.Dispose();
+                _loadCts = null;
+            }
+
+            IsCancellationRequested = false;
+            IsLoading = false;
+            OnPropertyChanged(nameof(CancelButtonVisibility));
         }
 
         private void UpdateSelectedUsersSummary()

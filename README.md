@@ -69,6 +69,19 @@ QuestPDF terms before commercial or organizational use:
    dotnet run --project SecParser.UI
    ```
 
+## Release Build
+
+Version metadata is centralized in `Directory.Build.props`.
+
+To produce a repeatable Windows x64 Release artifact:
+
+```powershell
+.\scripts\build-release.ps1
+```
+
+The script restores, builds, runs tests, publishes `SecParser.UI`, creates a zip
+under `artifacts\`, and writes a SHA-256 checksum file.
+
 ## Usage Guide
 
 1. **Load a Log:** Click `File` -> `Open Local Log...` and select any standard Windows `.evtx` file.

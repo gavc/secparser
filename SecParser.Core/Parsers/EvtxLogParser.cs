@@ -276,8 +276,7 @@ namespace SecParser.Core.Parsers
             {
                 using (record)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     var secEvent = new SecurityEventRecord
                     {
@@ -289,7 +288,7 @@ namespace SecParser.Core.Parsers
                         TaskCategory = record.TaskDisplayName
                     };
 
-                    PopulateFromXml(secEvent, record.ToXml());
+                    PopulateFromEventXml(secEvent, record.ToXml);
 
                     yield return secEvent;
                 }
@@ -322,6 +321,18 @@ namespace SecParser.Core.Parsers
                 "13" => "Cached Unlock",
                 _ => "Unknown/Other"
             };
+        }
+
+        public static void PopulateFromEventXml(SecurityEventRecord secEvent, Func<string> readXml)
+        {
+            try
+            {
+                PopulateFromXml(secEvent, readXml());
+            }
+            catch (Exception ex) when (IsRecoverableEventReadException(ex))
+            {
+                AddParseWarning(secEvent, $"Failed to read event XML: {ex.Message}");
+            }
         }
 
         public static void PopulateFromXml(SecurityEventRecord secEvent, string xmlString)
@@ -459,8 +470,7 @@ namespace SecParser.Core.Parsers
             }
             catch (Exception ex) when (ex is System.Xml.XmlException || ex is InvalidOperationException)
             {
-                secEvent.HasParseWarning = true;
-                secEvent.ParseWarning = ex.Message;
+                AddParseWarning(secEvent, ex.Message);
             }
         }
 
@@ -501,6 +511,21 @@ namespace SecParser.Core.Parsers
                 return null;
 
             return value.Trim();
+        }
+
+        private static bool IsRecoverableEventReadException(Exception ex)
+        {
+            return ex is EventLogException ||
+                   ex is InvalidOperationException ||
+                   ex is System.Xml.XmlException ||
+                   ex is IOException;
+        }
+
+        private static void AddParseWarning(SecurityEventRecord secEvent, string message)
+        {
+            secEvent.HasParseWarning = true;
+            secEvent.ParseWarning = message;
+            secEvent.LogonTypeDescription = GetLogonTypeDescription(secEvent.LogonType);
         }
     }
 }
