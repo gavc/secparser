@@ -26,24 +26,60 @@
 
         <!-- Tool / Filter Bar -->
         <ToolBar DockPanel.Dock="Top" Padding="5">
-            <Label Content="Users:" />
-            <ComboBox Width="200" Margin="5,0" ItemsSource="{Binding AvailableUsers}" 
-                      SelectedItem="{Binding SelectedUserItem, Mode=TwoWay}"
-                      IsEditable="True" IsReadOnly="True" Text="{Binding SelectedUsersSummary, Mode=OneWay}">
-                <ComboBox.ItemContainerStyle>
-                    <Style TargetType="ComboBoxItem">
-                        <Setter Property="Focusable" Value="False"/>
-                        <Setter Property="Padding" Value="2"/>
-                    </Style>
-                </ComboBox.ItemContainerStyle>
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <CheckBox Content="{Binding UserName}" IsChecked="{Binding IsSelected}" IsHitTestVisible="False" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <Label Content="Search User:" />
-            <TextBox Width="100" Margin="5,0" Text="{Binding UserFilter, UpdateSourceTrigger=PropertyChanged}" />
+            <Label Content="Users:" VerticalAlignment="Center"/>
+
+            <!-- ToggleButton opens the user-filter popup -->
+            <ToggleButton x:Name="UserFilterToggle"
+                          Width="210" Margin="5,0"
+                          IsChecked="{Binding IsUserFilterOpen, Mode=TwoWay}"
+                          HorizontalContentAlignment="Stretch" Padding="6,3"
+                          PreviewMouseLeftButtonDown="UserFilterToggle_PreviewMouseLeftButtonDown">
+                <DockPanel LastChildFill="True">
+                    <TextBlock Text="▾" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" FontSize="10"/>
+                    <TextBlock Text="{Binding SelectedUsersSummary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
+            </ToggleButton>
+
+            <!-- Popup: search box + Select All/Clear All + scrollable checkbox list -->
+            <Popup IsOpen="{Binding IsUserFilterOpen, Mode=TwoWay}"
+                   PlacementTarget="{Binding ElementName=UserFilterToggle}"
+                   Placement="Bottom"
+                   StaysOpen="False"
+                   AllowsTransparency="True">
+                <Border Background="White" BorderBrush="#AAAAAA" BorderThickness="1"
+                        MinWidth="220" Padding="0,4">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="5" Opacity="0.25" Direction="270"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <!-- Inline search filters the list below -->
+                        <TextBox Text="{Binding UserSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="6,2,6,5" Padding="3"
+                                 ToolTip="Type to filter the user list"/>
+                        <!-- Bulk-action buttons -->
+                        <StackPanel Orientation="Horizontal" Margin="6,0,6,5">
+                            <Button Content="Select All" Command="{Binding SelectAllUsersCommand}"
+                                    Padding="6,2" Margin="0,0,6,0" FontSize="11"/>
+                            <Button Content="Clear All" Command="{Binding ClearAllUsersCommand}"
+                                    Padding="6,2" FontSize="11"/>
+                        </StackPanel>
+                        <Separator Margin="0,0,0,2"/>
+                        <!-- Filtered user checkboxes -->
+                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding FilteredAvailableUsers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding UserName}"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  Margin="8,2" Padding="2,0"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </Popup>
+
             <Button Content="Clear Filter" Command="{Binding ClearFilterCommand}" Margin="5,0" Padding="10,0"/>
             <Separator/>
             <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5,0" Padding="10,0"/>

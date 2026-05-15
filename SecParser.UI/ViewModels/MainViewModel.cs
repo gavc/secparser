@@ -66,17 +66,22 @@ namespace SecParser.UI.ViewModels
 
         private CancellationTokenSource? _loadCts;
 
-        [ObservableProperty]
-        private string userFilter = string.Empty;
-
         private bool _isClearing;
 
-        partial void OnUserFilterChanged(string value)
+        [ObservableProperty]
+        private bool isUserFilterOpen;
+
+        [ObservableProperty]
+        private string userSearchText = string.Empty;
+
+        partial void OnIsUserFilterOpenChanged(bool value)
         {
-            if (!_isClearing)
-            {
-                ApplyFilter();
-            }
+            if (value) RebuildFilteredAvailableUsers();
+        }
+
+        partial void OnUserSearchTextChanged(string value)
+        {
+            RebuildFilteredAvailableUsers();
         }
 
         [ObservableProperty]
@@ -91,26 +96,6 @@ namespace SecParser.UI.ViewModels
             ApplyFilter();
         }
 
-        [ObservableProperty]
-        private UserFilterItem? selectedUserItem;
-        
-        partial void OnSelectedUserItemChanged(UserFilterItem? value)
-        {
-            if (value != null)
-            {
-                // Toggle the checkbox if they clicked the row itself (whitespace)
-                value.IsSelected = !value.IsSelected;
-                
-                // Clear the combobox's underlying selection instantly so it doesn't overwrite text
-                Application.Current.Dispatcher.BeginInvoke(new Action(() => 
-                {
-                    SelectedUserItem = null;
-                    UpdateSelectedUsersSummary();
-                    OnPropertyChanged(nameof(SelectedUsersSummary));
-                }));
-            }
-        }
-
         public Visibility ProgressBarVisibility => IsLoading ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility CancelButtonVisibility => _loadCts != null && IsLoading && !IsCancellationRequested
@@ -118,6 +103,7 @@ namespace SecParser.UI.ViewModels
             : Visibility.Collapsed;
 
         public ObservableCollection<UserFilterItem> AvailableUsers { get; } = new();
+        public ObservableCollection<UserFilterItem> FilteredAvailableUsers { get; } = new();
 
         public ObservableCollection<ParseDiagnostic> ParseDiagnostics { get; } = new();
         public ObservableCollection<SecurityEventRecord> FilteredEvents { get; } = new();
@@ -430,6 +416,55 @@ namespace SecParser.UI.ViewModels
             _isClearing = true;
             UpdateSelectedUsersSummary();
             _isClearing = false;
+            RebuildFilteredAvailableUsers();
+        }
+
+        private void RebuildFilteredAvailableUsers()
+        {
+            FilteredAvailableUsers.Clear();
+            var search = UserSearchText;
+            foreach (var user in AvailableUsers)
+            {
+                if (string.IsNullOrEmpty(search) ||
+                    user.UserName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                {
+                    FilteredAvailableUsers.Add(user);
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void SelectAllUsers()
+        {
+            _isClearing = true;
+            try
+            {
+                foreach (var user in FilteredAvailableUsers)
+                    user.IsSelected = true;
+            }
+            finally
+            {
+                _isClearing = false;
+            }
+            UpdateSelectedUsersSummary();
+            ApplyFilter();
+        }
+
+        [RelayCommand]
+        private void ClearAllUsers()
+        {
+            _isClearing = true;
+            try
+            {
+                foreach (var user in AvailableUsers)
+                    user.IsSelected = false;
+            }
+            finally
+            {
+                _isClearing = false;
+            }
+            UpdateSelectedUsersSummary();
+            ApplyFilter();
         }
 
         [RelayCommand]
@@ -456,12 +491,6 @@ namespace SecParser.UI.ViewModels
             if (selectedUsers.Any())
             {
                 q = q.Where(e => !string.IsNullOrEmpty(e.Username) && selectedUsers.Contains(e.Username));
-            }
-            else if (!string.IsNullOrWhiteSpace(UserFilter))
-            {
-                // Fallback to text search if no checkboxes selected
-                q = q.Where(e => !string.IsNullOrEmpty(e.Username) && 
-                                 e.Username.Contains(UserFilter, StringComparison.OrdinalIgnoreCase));
             }
 
             foreach (var item in q)
@@ -544,16 +573,16 @@ namespace SecParser.UI.ViewModels
             _isClearing = true;
             try
             {
-                UserFilter = string.Empty;
+                UserSearchText = string.Empty;
                 foreach (var user in AvailableUsers)
-                {
                     user.IsSelected = false;
-                }
             }
             finally
             {
                 _isClearing = false;
             }
+            IsUserFilterOpen = false;
+            UpdateSelectedUsersSummary();
             ApplyFilter();
             StatusMessage = "Filter cleared.";
         }
