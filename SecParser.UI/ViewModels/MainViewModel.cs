@@ -576,12 +576,16 @@ namespace SecParser.UI.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
+                // Snapshot on the UI thread before any await to avoid a race with
+                // RebuildFilteredCache() clearing the list on the UI thread while
+                // the exporter iterates it on a background thread.
+                var exportSnapshot = _filteredEventCache.ToList();
                 IsLoading = true;
                 StatusMessage = "Exporting to Excel...";
 
                 try
                 {
-                    await _excelExporter.ExportAsync(_filteredEventCache, dialog.FileName);
+                    await _excelExporter.ExportAsync(exportSnapshot, dialog.FileName);
                     StatusMessage = "Export successful.";
                     MessageBox.Show("Export completed successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -615,12 +619,14 @@ namespace SecParser.UI.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
+                // Snapshot on the UI thread before any await — same reason as Excel export.
+                var exportSnapshot = _filteredEventCache.ToList();
                 IsLoading = true;
                 StatusMessage = "Exporting to PDF...";
 
                 try
                 {
-                    await _pdfExporter.ExportAsync(_filteredEventCache, dialog.FileName);
+                    await _pdfExporter.ExportAsync(exportSnapshot, dialog.FileName);
                     StatusMessage = "Export successful.";
                     MessageBox.Show("Export completed successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
