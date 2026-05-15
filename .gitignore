@@ -1,0 +1,30 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+*.nupkg
+*.snupkg
+
+# IDE / user state
+.vs/
+.vscode/
+*.user
+*.suo
+*.rsuser
+
+# Logs and local diagnostics
+*.log
+*.trx
+coverage/
+coverage.*
+
+# Security event logs can contain sensitive data.
+*.evtx
+*.manifest.txt
+!samples/**/*.evtx
+!testdata/**/*.evtx
+
+# OS noise
+Thumbs.db
+Desktop.ini

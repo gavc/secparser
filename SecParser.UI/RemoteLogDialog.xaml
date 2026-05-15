@@ -1,0 +1,51 @@
+<Window x:Class="SecParser.UI.RemoteLogDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Connect to Remote Machine"
+        Height="330" Width="420"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="115"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
+                   Text="The Security event log will be exported from the remote machine and saved locally under Documents\SecParser\CollectedLogs\ before being loaded for analysis." />
+
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,0,0,8" TextWrapping="Wrap"
+                   FontStyle="Italic" Foreground="DimGray"
+                   Text="If SecParser is already running as an administrator with access to the target machine, leave the credential fields blank." />
+
+        <Label Grid.Row="2" Grid.Column="0" Content="Computer / IP:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" x:Name="ComputerNameBox" Margin="0,3"/>
+
+        <Label Grid.Row="3" Grid.Column="0" Content="Domain (optional):" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="DomainBox" Margin="0,3"/>
+
+        <Label Grid.Row="4" Grid.Column="0" Content="Username (optional):" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="4" Grid.Column="1" x:Name="UsernameBox" Margin="0,3"/>
+
+        <Label Grid.Row="5" Grid.Column="0" Content="Password (optional):" VerticalAlignment="Center"/>
+        <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="PasswordBox" Margin="0,3"/>
+
+        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Connect" Width="80" Margin="0,0,8,0"
+                    IsDefault="True" Click="ConnectButton_Click"/>
+            <Button Content="Cancel" Width="80" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

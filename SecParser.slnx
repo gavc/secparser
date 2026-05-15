@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SecParser.Core/SecParser.Core.csproj" />
+  <Project Path="SecParser.Core.Tests/SecParser.Core.Tests.csproj" />
+  <Project Path="SecParser.UI/SecParser.UI.csproj" />
+</Solution>
