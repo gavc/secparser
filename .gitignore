@@ -12,6 +12,7 @@ TestResults/
 *.user
 *.suo
 *.rsuser
+*.lscache
 
 # Logs and local diagnostics
 *.log

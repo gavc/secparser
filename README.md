@@ -17,7 +17,7 @@ SecParser is a native Windows desktop application for parsing and reviewing Wind
   * Automatically maps common Microsoft Security event IDs to human-readable *Event Descriptions*, including logon/logoff, Kerberos/NTLM, process tracking, account and group management, object access, policy changes, firewall/WFP, directory service changes, certificate services, and NPS/WLAN events.
   * Decodes numerical Windows Logon Types (e.g., Type 2, Type 3, Type 10) into actionable definitions like `Interactive (Local)`, `Network`, or `Remote Interactive (RDP)`.
   * Tracks parser warnings instead of silently discarding malformed event payloads.
-* **Dynamic Multi-Select Filtering:** Automatically catalogs every unique user present within the loaded log and builds a smart, searchable, multi-select dropdown. Instantly narrow down thousands of events to focus purely on the actors in question.
+* **Dynamic Multi-Select Filtering:** Automatically catalogs every unique user present within the loaded log and builds a smart popup filter panel. Click the `Users:` button to open the panel, type to narrow the list, then check any combination of users — the grid updates instantly. **Select All** and **Clear All** buttons let you bulk-toggle the visible users in one click.
 * **Professional Exports:**
   * **Excel (.xlsx):** Export the actively filtered grid directly to formatted Excel tables with native auto-filters using `ClosedXML`.
   * **PDF Reports:** Generate landscape-oriented PDF reports via `QuestPDF`. Includes a high-level summary, parse-warning count, time range, and recent logon/logoff context. PDF detail rows are capped for very large filtered result sets.
@@ -86,7 +86,7 @@ under `artifacts\`, and writes a SHA-256 checksum file.
 
 1. **Load a Log:** Click `File` -> `Open Local Log...` and select any standard Windows `.evtx` file.
 2. **Review Progress:** Watch the Status Bar at the bottom; events are rendered into the DataGrid dynamically in real-time batches. 
-3. **Filter by User:** Click the `Users:` drop-down on the toolbar. Check the boxes next to the individuals you wish to audit — the grid updates instantly. Use the `Search User:` text box to narrow down the dropdown list.
+3. **Filter by User:** Click the `Users:` button on the toolbar to open the filter popup. Type in the search box to narrow the list of accounts, then check the boxes next to the individuals you wish to audit — the grid updates instantly. Use **Select All** or **Clear All** to bulk-toggle the visible accounts.
 4. **System Accounts:** By default, built-in Windows service and machine accounts (SYSTEM, DWM-*, UMFD-*, machine accounts ending in `$`, etc.) are hidden from both the dropdown and the grid. To include them, toggle `Settings` -> `Show System Accounts`.
 5. **Export Findings:** Click `Export` on the top menu bar to dump your current filtered perspective out to `.xlsx` or a `.pdf` report.
 
