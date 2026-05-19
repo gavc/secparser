@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using QuestPDF.Infrastructure;
 
 namespace SecParser.UI;
 
@@ -8,9 +7,6 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-
-        // Set once at startup — not on every export call
-        QuestPDF.Settings.License = LicenseType.Community;
 
         // UI-thread unhandled exceptions
         DispatcherUnhandledException += (s, args) =>

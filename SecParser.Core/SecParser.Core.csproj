@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="QuestPDF" Version="2026.5.0" />
+    <PackageReference Include="PDFsharp-MigraDoc-WPF" Version="6.2.4" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.8" />
   </ItemGroup>
 

@@ -20,7 +20,7 @@ SecParser is a native Windows desktop application for parsing and reviewing Wind
 * **Dynamic Multi-Select Filtering:** Automatically catalogs every unique user present within the loaded log and builds a smart popup filter panel. Click the `Users:` button to open the panel, type to narrow the list, then check any combination of users — the grid updates instantly. **Select All** and **Clear All** buttons let you bulk-toggle the visible users in one click.
 * **Professional Exports:**
   * **Excel (.xlsx):** Export the actively filtered grid directly to formatted Excel tables with native auto-filters using `ClosedXML`.
-  * **PDF Reports:** Generate landscape-oriented PDF reports via `QuestPDF`. Includes a high-level summary, parse-warning count, time range, and recent logon/logoff context. PDF detail rows are capped for very large filtered result sets.
+  * **PDF Reports:** Generate landscape-oriented PDF reports via `PDFsharp` and `MigraDoc`. Includes a high-level summary, parse-warning count, time range, and recent logon/logoff context. PDF detail rows are capped for very large filtered result sets.
 * **Remote Collection:** Export the Security log from a remote machine using `EventLogSession`, save it under `Documents\SecParser\CollectedLogs`, calculate a SHA-256 hash, and write a lightweight collection manifest.
 
 ## Architecture & Technologies
@@ -31,7 +31,7 @@ SecParser is a native Windows desktop application for parsing and reviewing Wind
 * **Core Libraries:**
   * `System.Diagnostics.EventLog` - Deep, native EVTX querying.
   * `ClosedXML` - Open-source, enterprise-ready Excel generation.
-  * `QuestPDF` - Industry-standard PDF graphing and rendering.
+  * `PDFsharp` / `MigraDoc` WPF build - MIT-licensed PDF report generation.
 
 ## Prerequisites
 
@@ -42,13 +42,10 @@ SecParser is a native Windows desktop application for parsing and reviewing Wind
 
 SecParser is released under the MIT License. See [LICENSE](LICENSE).
 
-PDF export is powered by `QuestPDF`. SecParser configures QuestPDF with the
-Community license setting, which QuestPDF makes available to eligible users and
-projects such as individuals, open-source projects, non-profits, and companies
-below QuestPDF's stated annual gross revenue threshold. Review the current
-QuestPDF terms before commercial or organizational use:
+PDF export is powered by `PDFsharp` and `MigraDoc`, which are published under
+the MIT License. Review third-party package metadata before redistributing
+modified builds:
 
-* https://www.questpdf.com/license/
 * [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
 
 ## Getting Started

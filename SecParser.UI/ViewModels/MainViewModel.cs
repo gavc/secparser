@@ -600,7 +600,7 @@ namespace SecParser.UI.ViewModels
             {
                 Filter = "Excel Workbook (*.xlsx)|*.xlsx",
                 DefaultExt = ".xlsx",
-                FileName = $"SecurityEventsExport_{DateTime.Now:yyyyMMdd}.xlsx"
+                FileName = CreateExportFileName(".xlsx")
             };
 
             if (dialog.ShowDialog() == true)
@@ -643,7 +643,7 @@ namespace SecParser.UI.ViewModels
             {
                 Filter = "PDF Document (*.pdf)|*.pdf",
                 DefaultExt = ".pdf",
-                FileName = $"SecurityEventsExport_{DateTime.Now:yyyyMMdd}.pdf"
+                FileName = CreateExportFileName(".pdf")
             };
 
             if (dialog.ShowDialog() == true)
@@ -675,6 +675,11 @@ namespace SecParser.UI.ViewModels
         private void Exit()
         {
             Application.Current.Shutdown();
+        }
+
+        private static string CreateExportFileName(string extension)
+        {
+            return $"SecurityEventsExport_{DateTime.Now:yyMMdd_HHmmss}{extension}";
         }
     }
 }

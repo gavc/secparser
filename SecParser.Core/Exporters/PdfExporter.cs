@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
+using MigraDoc.DocumentObjectModel;
+using MigraDoc.DocumentObjectModel.Tables;
+using MigraDoc.Rendering;
 using SecParser.Core.Models;
 
 namespace SecParser.Core.Exporters
@@ -29,94 +28,184 @@ namespace SecParser.Core.Exporters
 
             await Task.Run(() =>
             {
-                Document.Create(container =>
+                var document = CreateDocument(
+                    detailRecords,
+                    users,
+                    dateRange,
+                    lastLogon,
+                    lastLogoff,
+                    recordList.Count,
+                    warningCount);
+
+                var renderer = new PdfDocumentRenderer
                 {
-                    container.Page(page =>
-                    {
-                        page.Size(PageSizes.A4.Landscape());
-                        page.Margin(1, Unit.Centimetre);
-                        page.PageColor(Colors.White);
-                        page.DefaultTextStyle(x => x.FontSize(8).FontFamily(Fonts.Arial));
+                    Document = document
+                };
 
-                        page.Header().Text("SecParser Export")
-                            .SemiBold().FontSize(16).FontColor(Colors.Blue.Darken2);
-
-                        page.Content().PaddingVertical(1, Unit.Centimetre).Column(col =>
-                        {
-                            // High Level Summary
-                            col.Item().PaddingBottom(10).Background(Colors.Grey.Lighten4).Padding(5).Column(summary =>
-                            {
-                                summary.Item().Text("High Level Summary").Bold().FontSize(12);
-                                summary.Item().Text($"User(s) Filtered: {users}");
-                                summary.Item().Text($"Date Range: {dateRange}");
-                                summary.Item().Text($"Most Recent Logon: {lastLogon}");
-                                summary.Item().Text($"Most Recent Logoff: {lastLogoff}");
-                                summary.Item().Text($"Total Records Extracted: {recordList.Count}");
-                                summary.Item().Text($"Parse Warnings: {warningCount}");
-                                if (recordList.Count > detailRecords.Count)
-                                {
-                                    summary.Item().Text($"Detail Rows Included: first {detailRecords.Count} records");
-                                }
-                            });
-
-                            col.Item().Table(table =>
-                            {
-                                // Define columns
-                                table.ColumnsDefinition(columns =>
-                                {
-                                    columns.RelativeColumn(3); // Time
-                                    columns.RelativeColumn(4); // Event (ID + Desc)
-                                    columns.RelativeColumn(3); // Target
-                                    columns.RelativeColumn(3); // Actor
-                                    columns.RelativeColumn(3); // IP
-                                    columns.RelativeColumn(5); // Logon Type (ID + Desc)
-                                });
-
-                            // Header
-                            table.Header(header =>
-                            {
-                                header.Cell().Text("Time Created").Bold();
-                                header.Cell().Text("Event").Bold();
-                                header.Cell().Text("Target").Bold();
-                                header.Cell().Text("Actor").Bold();
-                                header.Cell().Text("IP Address").Bold();
-                                header.Cell().Text("Logon Type").Bold();
-                                
-                                header.Cell().ColumnSpan(6).PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Black);
-                            });
-
-                            // Content
-                            foreach (var record in detailRecords)
-                            {
-                                var eventStr = record.EventId.ToString();
-                                if (!string.IsNullOrEmpty(record.EventDescription))
-                                    eventStr += $" - {record.EventDescription}";
-
-                                var logonStr = record.LogonType ?? "";
-                                if (!string.IsNullOrEmpty(record.LogonTypeDescription))
-                                    logonStr += string.IsNullOrEmpty(logonStr) ? record.LogonTypeDescription : $" - {record.LogonTypeDescription}";
-
-                                table.Cell().Text(record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? "");
-                                table.Cell().Text(eventStr);
-                                table.Cell().Text(record.TargetUserName ?? record.Username ?? "");
-                                table.Cell().Text(record.SubjectUserName ?? "");
-                                table.Cell().Text(record.IpAddress ?? "");
-                                table.Cell().Text(logonStr);
-                            }
-                        }); // close Table
-                        }); // close Column
-
-                        page.Footer().AlignCenter().Text(x =>
-                        {
-                            x.Span("Page ");
-                            x.CurrentPageNumber();
-                            x.Span(" of ");
-                            x.TotalPages();
-                        });
-                    });
-                })
-                .GeneratePdf(filePath);
+                renderer.RenderDocument();
+                renderer.PdfDocument.Save(filePath);
             });
+        }
+
+        private static Document CreateDocument(
+            IReadOnlyCollection<SecurityEventRecord> detailRecords,
+            string users,
+            string dateRange,
+            string lastLogon,
+            string lastLogoff,
+            int totalRecordCount,
+            int warningCount)
+        {
+            var document = new Document();
+            document.Info.Title = "SecParser Export";
+
+            var normalStyle = document.Styles["Normal"]!;
+            normalStyle.Font.Name = "Arial";
+            normalStyle.Font.Size = 8;
+
+            var section = document.AddSection();
+            section.PageSetup.PageFormat = PageFormat.A4;
+            section.PageSetup.Orientation = Orientation.Landscape;
+            section.PageSetup.TopMargin = Unit.FromCentimeter(1.8);
+            section.PageSetup.BottomMargin = Unit.FromCentimeter(1);
+            section.PageSetup.LeftMargin = Unit.FromCentimeter(1);
+            section.PageSetup.RightMargin = Unit.FromCentimeter(1);
+            section.PageSetup.HeaderDistance = Unit.FromCentimeter(0.6);
+            section.PageSetup.FooterDistance = Unit.FromCentimeter(0.5);
+
+            AddHeader(section);
+            AddFooter(section);
+            AddSummary(section, users, dateRange, lastLogon, lastLogoff, totalRecordCount, warningCount, detailRecords.Count);
+            AddDetailsTable(section, detailRecords);
+
+            return document;
+        }
+
+        private static void AddHeader(Section section)
+        {
+            var paragraph = section.Headers.Primary.AddParagraph("SecParser Export");
+            paragraph.Format.Font.Size = 16;
+            paragraph.Format.Font.Bold = true;
+            paragraph.Format.Font.Color = Colors.DarkBlue;
+            paragraph.Format.SpaceAfter = Unit.FromCentimeter(0.4);
+        }
+
+        private static void AddFooter(Section section)
+        {
+            var footer = section.Footers.Primary.AddParagraph();
+            footer.Format.Alignment = ParagraphAlignment.Center;
+            footer.AddText("Page ");
+            footer.AddPageField();
+            footer.AddText(" of ");
+            footer.AddNumPagesField();
+        }
+
+        private static void AddSummary(
+            Section section,
+            string users,
+            string dateRange,
+            string lastLogon,
+            string lastLogoff,
+            int totalRecordCount,
+            int warningCount,
+            int detailRecordCount)
+        {
+            var table = section.AddTable();
+            table.Borders.Visible = false;
+            table.Shading.Color = Colors.LightGray;
+            table.AddColumn(Unit.FromCentimeter(27.7));
+
+            var row = table.AddRow();
+            row.Cells[0].Format.SpaceBefore = Unit.FromCentimeter(0.15);
+            row.Cells[0].Format.SpaceAfter = Unit.FromCentimeter(0.15);
+            row.Cells[0].Format.LeftIndent = Unit.FromCentimeter(0.15);
+            row.Cells[0].Format.RightIndent = Unit.FromCentimeter(0.15);
+
+            AddSummaryLine(row.Cells[0], "High Level Summary", isHeading: true);
+            AddSummaryLine(row.Cells[0], $"User(s) Filtered: {users}");
+            AddSummaryLine(row.Cells[0], $"Date Range: {dateRange}");
+            AddSummaryLine(row.Cells[0], $"Most Recent Logon: {lastLogon}");
+            AddSummaryLine(row.Cells[0], $"Most Recent Logoff: {lastLogoff}");
+            AddSummaryLine(row.Cells[0], $"Total Records Extracted: {totalRecordCount}");
+            AddSummaryLine(row.Cells[0], $"Parse Warnings: {warningCount}");
+
+            if (totalRecordCount > detailRecordCount)
+            {
+                AddSummaryLine(row.Cells[0], $"Detail Rows Included: first {detailRecordCount} records");
+            }
+
+            section.AddParagraph().Format.SpaceAfter = Unit.FromCentimeter(0.25);
+        }
+
+        private static void AddSummaryLine(Cell cell, string text, bool isHeading = false)
+        {
+            var paragraph = cell.AddParagraph(text);
+            paragraph.Format.Font.Bold = isHeading;
+            paragraph.Format.Font.Size = isHeading ? 12 : 8;
+            paragraph.Format.SpaceAfter = Unit.FromPoint(2);
+        }
+
+        private static void AddDetailsTable(Section section, IEnumerable<SecurityEventRecord> detailRecords)
+        {
+            var table = section.AddTable();
+            table.Borders.Width = 0.25;
+            table.Rows.LeftIndent = 0;
+
+            table.AddColumn(Unit.FromCentimeter(4.0));
+            table.AddColumn(Unit.FromCentimeter(6.0));
+            table.AddColumn(Unit.FromCentimeter(4.0));
+            table.AddColumn(Unit.FromCentimeter(4.0));
+            table.AddColumn(Unit.FromCentimeter(3.5));
+            table.AddColumn(Unit.FromCentimeter(6.2));
+
+            var header = table.AddRow();
+            header.HeadingFormat = true;
+            header.Format.Font.Bold = true;
+            header.Shading.Color = Colors.LightGray;
+            AddCell(header, 0, "Time Created");
+            AddCell(header, 1, "Event");
+            AddCell(header, 2, "Target");
+            AddCell(header, 3, "Actor");
+            AddCell(header, 4, "IP Address");
+            AddCell(header, 5, "Logon Type");
+
+            foreach (var record in detailRecords)
+            {
+                var row = table.AddRow();
+                row.VerticalAlignment = VerticalAlignment.Top;
+
+                var eventText = record.EventId.ToString();
+                if (!string.IsNullOrEmpty(record.EventDescription))
+                {
+                    eventText += $" - {record.EventDescription}";
+                }
+
+                var logonText = record.LogonType ?? string.Empty;
+                if (!string.IsNullOrEmpty(record.LogonTypeDescription))
+                {
+                    logonText += string.IsNullOrEmpty(logonText)
+                        ? record.LogonTypeDescription
+                        : $" - {record.LogonTypeDescription}";
+                }
+
+                AddCell(row, 0, record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty);
+                AddCell(row, 1, eventText);
+                AddCell(row, 2, record.TargetUserName ?? record.Username ?? string.Empty);
+                AddCell(row, 3, record.SubjectUserName ?? string.Empty);
+                AddCell(row, 4, record.IpAddress ?? string.Empty);
+                AddCell(row, 5, logonText);
+            }
+        }
+
+        private static void AddCell(Row row, int columnIndex, string text)
+        {
+            var cell = row.Cells[columnIndex];
+            cell.Format.Font.Size = 7.5;
+            cell.Format.SpaceBefore = Unit.FromPoint(1);
+            cell.Format.SpaceAfter = Unit.FromPoint(1);
+            cell.Format.LeftIndent = Unit.FromPoint(2);
+            cell.Format.RightIndent = Unit.FromPoint(2);
+            cell.AddParagraph(text);
         }
     }
 }
