@@ -25,6 +25,7 @@ namespace SecParser.Core.Exporters
             var lastLogon = orderedRecords.LastOrDefault(r => r.EventId == 4624)?.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? "None";
             var lastLogoff = orderedRecords.LastOrDefault(r => r.EventId == 4634 || r.EventId == 4647)?.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? "None";
             var warningCount = recordList.Count(r => r.HasParseWarning);
+            var exportTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
             await Task.Run(() =>
             {
@@ -35,7 +36,8 @@ namespace SecParser.Core.Exporters
                     lastLogon,
                     lastLogoff,
                     recordList.Count,
-                    warningCount);
+                    warningCount,
+                    exportTimestamp);
 
                 var renderer = new PdfDocumentRenderer
                 {
@@ -54,7 +56,8 @@ namespace SecParser.Core.Exporters
             string lastLogon,
             string lastLogoff,
             int totalRecordCount,
-            int warningCount)
+            int warningCount,
+            string exportTimestamp)
         {
             var document = new Document();
             document.Info.Title = "SecParser Export";
@@ -74,7 +77,7 @@ namespace SecParser.Core.Exporters
             section.PageSetup.FooterDistance = Unit.FromCentimeter(0.5);
 
             AddHeader(section);
-            AddFooter(section);
+            AddFooter(section, exportTimestamp);
             AddSummary(section, users, dateRange, lastLogon, lastLogoff, totalRecordCount, warningCount, detailRecords.Count);
             AddDetailsTable(section, detailRecords);
 
@@ -90,14 +93,25 @@ namespace SecParser.Core.Exporters
             paragraph.Format.SpaceAfter = Unit.FromCentimeter(0.4);
         }
 
-        private static void AddFooter(Section section)
+        private static void AddFooter(Section section, string exportTimestamp)
         {
-            var footer = section.Footers.Primary.AddParagraph();
-            footer.Format.Alignment = ParagraphAlignment.Center;
-            footer.AddText("Page ");
-            footer.AddPageField();
-            footer.AddText(" of ");
-            footer.AddNumPagesField();
+            var footer = section.Footers.Primary.AddTable();
+            footer.Borders.Visible = false;
+            footer.AddColumn(Unit.FromCentimeter(9.2));
+            footer.AddColumn(Unit.FromCentimeter(9.3));
+            footer.AddColumn(Unit.FromCentimeter(9.2));
+
+            var row = footer.AddRow();
+
+            row.Cells[0].AddParagraph($"Exported: {exportTimestamp}");
+            row.Cells[0].Format.Alignment = ParagraphAlignment.Left;
+
+            var pageNumber = row.Cells[1].AddParagraph();
+            pageNumber.Format.Alignment = ParagraphAlignment.Center;
+            pageNumber.AddText("Page ");
+            pageNumber.AddPageField();
+            pageNumber.AddText(" of ");
+            pageNumber.AddNumPagesField();
         }
 
         private static void AddSummary(
