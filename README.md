@@ -21,13 +21,16 @@ SecParser is a native Windows desktop application for parsing and reviewing Wind
 * **Professional Exports:**
   * **Excel (.xlsx):** Export the actively filtered grid directly to formatted Excel tables with native auto-filters using `ClosedXML`.
   * **PDF Reports:** Generate landscape-oriented PDF reports via `PDFsharp` and `MigraDoc`. Includes a high-level summary, parse-warning count, time range, and recent logon/logoff context. PDF detail rows are capped for very large filtered result sets.
-* **Remote Collection:** Export the Security log from a remote machine using `EventLogSession`, save it under `Documents\SecParser\CollectedLogs`, calculate a SHA-256 hash, and write a lightweight collection manifest.
+* **Remote Collection:** Export the Security log from a remote machine using `EventLogSession`, save it under `Documents\SecParser\CollectedLogs`, calculate a SHA-256 hash, and write a collection manifest recording host, UTC timestamp, file size, hash, credential mode (current user / explicit), and the negotiated RPC authentication mechanism.
+* **Hardened Input Handling:** EVTX inputs are validated up front (extension, 1 GiB size cap, binary `ElfFile\0` magic header) and export paths are checked for valid extensions and reserved Windows device names. Remote host names are normalised and length-clamped, and the resulting collected-log path is verified to stay under `Documents\SecParser\CollectedLogs` to defend against directory-traversal payloads. Passwords entered into the remote-log dialog are held in a `SecureString` and zeroed deterministically after the call completes.
+* **Diagnostic Logging & Crash Capture:** All parsers, exporters, and the remote collector log start/end and failure events to a daily-rolling text file under `%LocalAppData%\SecParser\logs\secparser-yyyyMMdd.log` (14-day retention). Unhandled WPF dispatcher, AppDomain, and task-scheduler exceptions are caught, logged with a correlation ID, and surfaced to the user with that ID for support triage.
 
 ## Architecture & Technologies
 
 * **Framework:** .NET 10 (Targeting `net10.0-windows10.0.19041.0`)
 * **UI:** Windows Presentation Foundation (WPF) providing native Windows 11 UX stability.
-* **Pattern:** MVVM powered by the `CommunityToolkit.Mvvm`.
+* **Pattern:** MVVM powered by `CommunityToolkit.Mvvm`. The UI host is built on `Microsoft.Extensions.Hosting` with constructor-injected services (`IEvtxLogParser`, `IRemoteLogCollector`, `IRecordExporter`, `ILogLoadingService`, `IExportCoordinator`, `IFileDialogService`, `IUserDialogService`, `IAppLogger`).
+* **Build & Quality:** Central Package Management, warnings-as-errors, .NET analyzers in `Recommended` mode, deterministic builds, and Source Link enabled repo-wide.
 * **Core Libraries:**
   * `System.Diagnostics.EventLog` - Deep, native EVTX querying.
   * `ClosedXML` - Open-source, enterprise-ready Excel generation.
@@ -91,7 +94,7 @@ under `artifacts\`, and writes a SHA-256 checksum file.
 
 * Add event-specific views for account management, Kerberos, NTLM, process creation, and RDP session tracking.
 * Add time-range and event-ID query controls for remote collection.
-* Add virtualization/paging for very large result sets.
+* Persist user preferences (page size, default export folder, last-used filters).
 
 ## Event ID Sources
 

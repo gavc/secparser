@@ -1,10 +1,10 @@
 using System.Security;
 using System.Windows;
 
-namespace SecParser.UI
+namespace SecParser.UI;
+
+public partial class RemoteLogDialog : Window
 {
-    public partial class RemoteLogDialog : Window
-    {
         public string? ComputerName { get; private set; }
         public string? Domain { get; private set; }
         public string? Username { get; private set; }
@@ -34,4 +34,3 @@ namespace SecParser.UI
             DialogResult = true;
         }
     }
-}

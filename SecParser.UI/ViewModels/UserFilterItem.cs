@@ -1,10 +1,10 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace SecParser.UI.ViewModels
+namespace SecParser.UI.ViewModels;
+
+public partial class UserFilterItem : ObservableObject
 {
-    public partial class UserFilterItem : ObservableObject
-    {
         public Action? SelectionChangedCallback { get; set; }
 
         [ObservableProperty]
@@ -18,4 +18,3 @@ namespace SecParser.UI.ViewModels
             SelectionChangedCallback?.Invoke();
         }
     }
-}

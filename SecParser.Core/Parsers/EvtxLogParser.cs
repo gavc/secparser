@@ -5,12 +5,25 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Xml.Linq;
+using SecParser.Core.Abstractions;
+using SecParser.Core.Diagnostics;
 using SecParser.Core.Models;
 
-namespace SecParser.Core.Parsers
+namespace SecParser.Core.Parsers;
+
+public class EvtxLogParser : IEvtxLogParser
 {
-    public class EvtxLogParser
-    {
+        private const string LogCategory = nameof(EvtxLogParser);
+
+        private readonly IAppLogger _logger;
+
+        public EvtxLogParser() : this(null) { }
+
+        public EvtxLogParser(IAppLogger? logger)
+        {
+            _logger = logger ?? NullAppLogger.Instance;
+        }
+
         private static readonly IReadOnlyDictionary<int, string> EventDescriptions = new Dictionary<int, string>
         {
             // System / audit lifecycle
@@ -268,9 +281,15 @@ namespace SecParser.Core.Parsers
         public async IAsyncEnumerable<SecurityEventRecord> ParseAsync(string filePath, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await Task.Yield(); // Ensure it runs asynchronously
-            
+
+            PathValidation.EnsureValidEvtxFile(filePath);
+
+            _logger.Information(LogCategory, $"Begin parsing '{filePath}'.");
+            var count = 0;
+            var warnings = 0;
+
             using var reader = new EventLogReader(filePath, PathType.FilePath);
-            
+
             EventRecord? record;
             while ((record = reader.ReadEvent()) != null)
             {
@@ -289,10 +308,14 @@ namespace SecParser.Core.Parsers
                     };
 
                     PopulateFromEventXml(secEvent, record.ToXml);
+                    if (secEvent.HasParseWarning) warnings++;
+                    count++;
 
                     yield return secEvent;
                 }
             }
+
+            _logger.Information(LogCategory, $"Finished parsing '{filePath}': {count} events, {warnings} parse warning(s).");
         }
 
         public static string? GetEventDescription(int eventId)
@@ -502,7 +525,7 @@ namespace SecParser.Core.Parsers
                    username.Equals("ANONYMOUS LOGON", StringComparison.OrdinalIgnoreCase) ||
                    username.StartsWith("UMFD-", StringComparison.OrdinalIgnoreCase) ||
                    username.StartsWith("DWM-", StringComparison.OrdinalIgnoreCase) ||
-                   username.EndsWith("$");
+                   username.EndsWith('$');
         }
 
         private static string? CleanValue(string? value)
@@ -528,4 +551,3 @@ namespace SecParser.Core.Parsers
             secEvent.LogonTypeDescription = GetLogonTypeDescription(secEvent.LogonType);
         }
     }
-}

@@ -1,0 +1,86 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,xml,csproj,props,targets,xaml,config,md}]
+indent_size = 2
+
+[*.{ps1,psm1,psd1}]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# Language conventions
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_using_directive_placement = outside_namespace:warning
+csharp_prefer_braces = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = when_on_single_line:suggestion
+csharp_new_line_before_open_brace = all
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+# Naming: async methods end with Async
+dotnet_naming_rule.async_methods_end_in_async.symbols  = async_methods
+dotnet_naming_rule.async_methods_end_in_async.style    = end_in_async_style
+dotnet_naming_rule.async_methods_end_in_async.severity = suggestion
+dotnet_naming_symbols.async_methods.applicable_kinds   = method
+dotnet_naming_symbols.async_methods.required_modifiers = async
+dotnet_naming_style.end_in_async_style.required_suffix = Async
+dotnet_naming_style.end_in_async_style.capitalization  = pascal_case
+
+# Analyzer severities — security/correctness focused
+dotnet_diagnostic.CA1031.severity = warning   # Do not catch general exception types
+dotnet_diagnostic.CA1305.severity = warning   # Specify IFormatProvider
+dotnet_diagnostic.CA1310.severity = warning   # Specify StringComparison for correctness
+dotnet_diagnostic.CA1862.severity = warning   # Use string.Equals(string, StringComparison)
+dotnet_diagnostic.CA1822.severity = none      # Member can be static — interfaces arrive in Phase 2
+dotnet_diagnostic.CA1859.severity = none      # Concrete types for perf — fights good API shape
+dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait — re-enabled in Core only (see below)
+dotnet_diagnostic.CA1848.severity = none      # LoggerMessage source-gen — opt in later
+dotnet_diagnostic.CA1303.severity = none      # Don't pass literals as localized parameters
+dotnet_diagnostic.CA2227.severity = none      # Collection properties should be read only — DTO friction
+# IDE0008 (use var) etc kept at info to avoid noise during refactors
+dotnet_diagnostic.IDE0008.severity = none
+
+# Phase 0 — keep file-scoped namespace as a build-blocking rule
+dotnet_diagnostic.IDE0161.severity = warning
+
+[SecParser.Core/**/*.cs]
+# Library code: ConfigureAwait(false) is required
+dotnet_diagnostic.CA2007.severity = warning
+
+[SecParser.Core.Tests/**.cs]
+# Test code: relax a few rules that add noise without value
+dotnet_diagnostic.CA1031.severity = none
+dotnet_diagnostic.CA1707.severity = none   # Underscores in test names
+dotnet_diagnostic.CA2007.severity = none
+
+[SecParser.UI/**.cs]
+# UI code is consumed on the dispatcher; ConfigureAwait(false) is not appropriate
+dotnet_diagnostic.CA2007.severity = none
+# Phase 1 narrowed broad catches; keep CA1031 enforced as warning.
+dotnet_diagnostic.CA1031.severity = warning
+# Phase 2: MainViewModel now implements IDisposable; CA1001 is enforced.
+dotnet_diagnostic.CA1001.severity = warning

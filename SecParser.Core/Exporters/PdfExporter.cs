@@ -1,31 +1,52 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
+using SecParser.Core.Abstractions;
+using SecParser.Core.Diagnostics;
 using SecParser.Core.Models;
 
-namespace SecParser.Core.Exporters
+namespace SecParser.Core.Exporters;
+
+public class PdfExporter : IRecordExporter
 {
-    public class PdfExporter
-    {
+        private const string LogCategory = nameof(PdfExporter);
+
+        private readonly IAppLogger _logger;
+
+        public PdfExporter() : this(null) { }
+
+        public PdfExporter(IAppLogger? logger)
+        {
+            _logger = logger ?? NullAppLogger.Instance;
+        }
+
+        public string DisplayName => "PDF Document";
+        public string FilterMask => "PDF Document (*.pdf)|*.pdf";
+        public string DefaultExtension => ".pdf";
+
         public async Task ExportAsync(IEnumerable<SecurityEventRecord> records, string filePath)
         {
+            PathValidation.EnsureValidExportPath(filePath, DefaultExtension);
+
             var recordList = records.ToList();
+            _logger.Information(LogCategory, $"Begin PDF export of {recordList.Count} record(s) to '{filePath}'.");
             const int maxDetailRows = 5000;
             var detailRecords = recordList.Take(maxDetailRows).ToList();
             var users = string.Join(", ", recordList.Where(r => !string.IsNullOrEmpty(r.Username)).Select(r => r.Username).Distinct());
             if (string.IsNullOrEmpty(users)) users = "None";
 
             var orderedRecords = recordList.Where(r => r.TimeCreated.HasValue).OrderBy(r => r.TimeCreated).ToList();
-            var dateRange = orderedRecords.Any() ? $"{orderedRecords.First().TimeCreated:yyyy-MM-dd HH:mm:ss} to {orderedRecords.Last().TimeCreated:yyyy-MM-dd HH:mm:ss}" : "N/A";
+            var dateRange = orderedRecords.Count > 0 ? FormattableString.Invariant($"{orderedRecords[0].TimeCreated:yyyy-MM-dd HH:mm:ss} to {orderedRecords[^1].TimeCreated:yyyy-MM-dd HH:mm:ss}") : "N/A";
 
-            var lastLogon = orderedRecords.LastOrDefault(r => r.EventId == 4624)?.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? "None";
-            var lastLogoff = orderedRecords.LastOrDefault(r => r.EventId == 4634 || r.EventId == 4647)?.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? "None";
+            var lastLogon = orderedRecords.LastOrDefault(r => r.EventId == 4624)?.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "None";
+            var lastLogoff = orderedRecords.LastOrDefault(r => r.EventId == 4634 || r.EventId == 4647)?.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "None";
             var warningCount = recordList.Count(r => r.HasParseWarning);
-            var exportTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var exportTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
             await Task.Run(() =>
             {
@@ -46,7 +67,8 @@ namespace SecParser.Core.Exporters
 
                 renderer.RenderDocument();
                 renderer.PdfDocument.Save(filePath);
-            });
+            }).ConfigureAwait(false);
+            _logger.Information(LogCategory, $"Completed PDF export to '{filePath}'.");
         }
 
         private static Document CreateDocument(
@@ -188,7 +210,7 @@ namespace SecParser.Core.Exporters
                 var row = table.AddRow();
                 row.VerticalAlignment = VerticalAlignment.Top;
 
-                var eventText = record.EventId.ToString();
+                var eventText = record.EventId.ToString(CultureInfo.InvariantCulture);
                 if (!string.IsNullOrEmpty(record.EventDescription))
                 {
                     eventText += $" - {record.EventDescription}";
@@ -202,7 +224,7 @@ namespace SecParser.Core.Exporters
                         : $" - {record.LogonTypeDescription}";
                 }
 
-                AddCell(row, 0, record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty);
+                AddCell(row, 0, record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? string.Empty);
                 AddCell(row, 1, eventText);
                 AddCell(row, 2, record.TargetUserName ?? record.Username ?? string.Empty);
                 AddCell(row, 3, record.SubjectUserName ?? string.Empty);
@@ -222,4 +244,3 @@ namespace SecParser.Core.Exporters
             cell.AddParagraph(text);
         }
     }
-}
