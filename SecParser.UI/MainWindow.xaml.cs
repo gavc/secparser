@@ -11,7 +11,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new MainViewModel();
+        // DataContext is set by App.OnStartup (which injects the logger).
+        // The parameterless fallback covers design-time / direct instantiation.
+        if (DataContext is null)
+        {
+            DataContext = new MainViewModel();
+        }
     }
 
     // Prevents the classic WPF re-open bug: when the popup is open and the user

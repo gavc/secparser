@@ -2,14 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Description>Core parsing, models and exporters for SecParser — a Windows Security Event Log (.evtx) browser.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="PDFsharp-MigraDoc-WPF" Version="6.2.4" />
-    <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.8" />
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="PDFsharp-MigraDoc-WPF" />
+    <PackageReference Include="System.Diagnostics.EventLog" />
   </ItemGroup>
 
 </Project>

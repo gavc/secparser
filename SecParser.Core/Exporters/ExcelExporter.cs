@@ -1,19 +1,40 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using SecParser.Core.Abstractions;
+using SecParser.Core.Diagnostics;
 using SecParser.Core.Models;
 using ClosedXML.Excel;
 using System.Threading.Tasks;
 
-namespace SecParser.Core.Exporters
+namespace SecParser.Core.Exporters;
+
+public class ExcelExporter : IRecordExporter
 {
-    public class ExcelExporter
-    {
+        private const string LogCategory = nameof(ExcelExporter);
+
+        private readonly IAppLogger _logger;
+
+        public ExcelExporter() : this(null) { }
+
+        public ExcelExporter(IAppLogger? logger)
+        {
+            _logger = logger ?? NullAppLogger.Instance;
+        }
+
+        public string DisplayName => "Excel Workbook";
+        public string FilterMask => "Excel Workbook (*.xlsx)|*.xlsx";
+        public string DefaultExtension => ".xlsx";
+
         public async Task ExportAsync(IEnumerable<SecurityEventRecord> records, string filePath)
         {
+            PathValidation.EnsureValidExportPath(filePath, DefaultExtension);
+
             await Task.Run(() =>
             {
                 var recordList = records.ToList();
+                _logger.Information(LogCategory, $"Begin Excel export of {recordList.Count} record(s) to '{filePath}'.");
                 using var workbook = new XLWorkbook();
                 var worksheet = workbook.Worksheets.Add("Security Events");
 
@@ -64,7 +85,7 @@ namespace SecParser.Core.Exporters
                 int row = 2;
                 foreach (var record in recordList)
                 {
-                    worksheet.Cell(row, 1).Value = record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss");
+                    worksheet.Cell(row, 1).Value = record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
                     worksheet.Cell(row, 2).Value = record.EventId;
                     worksheet.Cell(row, 3).Value = record.EventDescription;
                     worksheet.Cell(row, 4).Value = record.Computer;
@@ -108,7 +129,8 @@ namespace SecParser.Core.Exporters
                 worksheet.Columns().AdjustToContents();
                 AddDiagnosticsWorksheet(workbook, recordList.Where(r => r.HasParseWarning));
                 workbook.SaveAs(filePath);
-            });
+            }).ConfigureAwait(false);
+            _logger.Information(LogCategory, $"Completed Excel export to '{filePath}'.");
         }
 
         private static void AddDiagnosticsWorksheet(XLWorkbook workbook, IEnumerable<SecurityEventRecord> warningRecords)
@@ -131,7 +153,7 @@ namespace SecParser.Core.Exporters
             var row = 2;
             foreach (var record in diagnostics)
             {
-                worksheet.Cell(row, 1).Value = record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss");
+                worksheet.Cell(row, 1).Value = record.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
                 worksheet.Cell(row, 2).Value = record.RecordId;
                 worksheet.Cell(row, 3).Value = record.EventId;
                 worksheet.Cell(row, 4).Value = record.Computer;
@@ -142,4 +164,3 @@ namespace SecParser.Core.Exporters
             worksheet.Columns().AdjustToContents();
         }
     }
-}
